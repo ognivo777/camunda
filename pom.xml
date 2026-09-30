@@ -20,9 +20,7 @@
     <module>parent</module>
     <module>atomix</module>
     <module>auth</module>
-    <module>broker</module>
     <module>protocol-test-util</module>
-    <module>dist</module>
     <module>protocol</module>
     <module>bpmn-model</module>
     <module>logstreams</module>
@@ -38,11 +36,7 @@
     <module>gateway-protocol-impl</module>
     <module>gateway</module>
     <module>clients/java</module>
-    <module>exporter-api</module>
-    <module>exporter-test</module>
     <module>protocol-asserts</module>
-    <module>exporters/elasticsearch-exporter</module>
-    <module>exporters/opensearch-exporter</module>
     <module>protocol-impl</module>
     <module>protocol-jackson</module>
     <module>zb-db</module>
@@ -51,16 +45,9 @@
     <module>dmn</module>
     <module>snapshot</module>
     <module>journal</module>
-    <module>qa</module>
-    <module>benchmarks/project</module>
     <module>scheduler</module>
-    <module>backup</module>
-    <module>backup-stores/testkit</module>
-    <module>backup-stores/s3</module>
-    <module>backup-stores/gcs</module>
-    <module>backup-stores/azure</module>
-    <module>restore</module>
     <module>topology</module>
+    <module>lite</module>
   </modules>
 
   <scm>
