@@ -136,10 +136,10 @@ client default) therefore keep working.
 
 - **Single node, single partition.** No failover, no scaling, no multi-partition
   routing (the gateway always talks to "partition 1").
-- **No durable log.** The log stream is in-memory; engine state lives in RocksDB under
-  `--data-dir`. After a restart, state is recovered from the latest snapshot in
-  RocksDB, and events applied *after* the last snapshot are lost. Restart persistence
-  is best-effort and untested in v1 — for now, start with a fresh data directory.
+- **No restart persistence.** The log stream is in-memory, so nothing is carried over
+  between runs. On every start the launcher removes the previous `--data-dir` contents
+  (a warning is logged) and begins from a clean state; after a restart, previous
+  deployments, process instances and jobs are gone.
 - **No auth** (anonymous only), **no multi-tenancy administration**, **no exporters**,
   **no backup/restore**, **no admin API**, **no metrics/actuator**.
 - The experimental **job streaming** (`StreamJobs`) is wired but long polling is the

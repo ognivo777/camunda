@@ -28,8 +28,12 @@ import io.camunda.zeebe.scheduler.ActorScheduler;
 import io.camunda.zeebe.stream.impl.StreamProcessor;
 import io.camunda.zeebe.stream.impl.StreamProcessorMode;
 import io.camunda.zeebe.util.FeatureFlags;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -137,7 +141,13 @@ public final class CamundaLite {
               .toCompletableFuture()
               .get(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-      // 3. engine state in RocksDB inside the local data directory
+      // 3. engine state in RocksDB inside the local data directory.
+      // The log stream is in-memory, so it is gone after a restart. Reusing an old data
+      // directory would leave a stale "last processed position" in RocksDB that no longer
+      // exists in the (empty) in-memory log, breaking snapshot recovery. v1 has no restart
+      // persistence, so every start begins from a clean data directory.
+      startFromCleanDataDir(dataDir);
+
       final var zeebeDb =
           new ZeebeRocksDbFactory<ZbColumnFamilies>(
                   new RocksDbConfiguration(), new ConsistencyChecksSettings())
@@ -230,6 +240,40 @@ public final class CamundaLite {
 
     Runtime.getRuntime()
         .addShutdownHook(new Thread(runtime::close, "camunda-lite-shutdown"));
+  }
+
+  /**
+   * Deletes any previous engine state in the data directory so the run starts from a clean
+   * slate. v1 keeps the log in memory, so there is nothing meaningful to carry over across
+   * restarts; reusing an old RocksDB state would break snapshot recovery (see step 3).
+   */
+  private static void startFromCleanDataDir(final Path dataDir) {
+    if (!Files.exists(dataDir)) {
+      return;
+    }
+    LOG.warn(
+        "Removing existing data directory {} (v1 has no restart persistence; starting clean).",
+        dataDir.toAbsolutePath());
+    try (final var paths = Files.walk(dataDir)) {
+      paths
+          .sorted(Comparator.reverseOrder()) // children before parents
+          .forEach(
+              path -> {
+                try {
+                  Files.deleteIfExists(path);
+                } catch (final IOException e) {
+                  throw new UncheckedIOException(
+                      "Could not delete "
+                          + path
+                          + " - the file is still locked by another process. If a previous"
+                          + " Camunda Lite instance is still running, stop it first, or start"
+                          + " with a fresh --data-dir.",
+                      e);
+                }
+              });
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Could not clear data directory " + dataDir, e);
+    }
   }
 
   private static void closeAll(final List<AutoCloseable> closeables, final ActorScheduler scheduler) {
